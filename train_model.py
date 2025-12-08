@@ -22,11 +22,26 @@ TRAIN_SPLIT = 0.8
 def fetch_stock_data(ticker, start_date, end_date):
     """Fetch stock data from Yahoo Finance"""
     print(f"Fetching data for {ticker}...")
-    df = yf.download(ticker, start=start_date, end=end_date, progress=False)
+
+    # Try using Ticker object first (more reliable)
+    try:
+        stock = yf.Ticker(ticker)
+        df = stock.history(start=start_date, end=end_date, auto_adjust=False)
+
+        if df.empty:
+            print("Trying alternative download method...")
+            df = yf.download(ticker, start=start_date, end=end_date, progress=False, auto_adjust=False)
+    except Exception as e:
+        print(f"Error with Ticker method: {e}")
+        print("Trying download method...")
+        df = yf.download(ticker, start=start_date, end=end_date, progress=False, auto_adjust=False)
 
     # Flatten column names if multi-index
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.droplevel(1)
+
+    if df.empty:
+        raise ValueError(f"No data downloaded for {ticker}. Please check the ticker symbol and try again.")
 
     return df
 
